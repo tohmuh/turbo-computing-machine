@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tambola Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { --pink-button: #ff2d55; --wood-bg: #4a3728; --green-color: #34c759; --orange-color: #ff9500; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; background-color: var(--wood-bg); background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); margin: 0; padding: 20px; user-select: none; }
+        .app-container { width: 100%; max-width: 400px; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .admin-header { text-align: center; color: white; font-family: 'Orbitron', sans-serif; font-size: 2em; margin-bottom: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .status-display { text-align: center; color: white; font-family: 'Orbitron', sans-serif; font-size: 1.2em; margin-bottom: 15px; padding: 10px; border-radius: 8px; background-color: var(--orange-color); transition: background-color 0.3s; }
+        .status-display.playing { background-color: var(--green-color); }
+        #numberGrid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; }
+        .number-cell { display: flex; justify-content: center; align-items: center; height: 32px; background: linear-gradient(to bottom, #fefefe, #e0e0e0); font-weight: bold; color: #333; border-radius: 5px; box-shadow: 0 2px 2px rgba(0,0,0,0.2); cursor: pointer; }
+        .number-cell.called { background: var(--pink-button); color: white; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1 class="admin-header">ADMIN PANEL</h1>
+        <div id="gameStatus" class="status-display">Game Paused</div>
+        <div id="numberGrid"></div>
+    </div>
+    <script>
+        const socket = io();
+        const numberGrid = document.getElementById('numberGrid');
+        const gameStatusEl = document.getElementById('gameStatus');
+        let isGamePlaying = false;
+        let calledNumbers = new Set();
+        function updateStatusUI() { gameStatusEl.textContent = isGamePlaying ? 'Game is Playing' : 'Game Paused'; gameStatusEl.classList.toggle('playing', isGamePlaying); }
+        function generateGrid() { numberGrid.innerHTML = ''; for (let i = 1; i <= 90; i++) { const cell = document.createElement('div'); cell.classList.add('number-cell'); cell.textContent = i; cell.id = `admin-cell-${i}`; if (calledNumbers.has(i)) cell.classList.add('called'); cell.addEventListener('click', () => handleNumberClick(i)); numberGrid.appendChild(cell); } }
+        function handleNumberClick(number) { if (!isGamePlaying) { alert("Action blocked: The game is currently paused."); return; } if (!calledNumbers.has(number)) { socket.emit('game-event', { type: 'manualNumberCall', number: number }); } }
+        function updateGridState() { const cells = document.querySelectorAll('.number-cell'); cells.forEach(cell => { const num = parseInt(cell.textContent); cell.classList.toggle('called', calledNumbers.has(num)); }); }
+        socket.on('game-event', (data) => { if (data.type === 'numberDrawn') { calledNumbers = new Set(JSON.parse(data.numbers)); updateGridState(); } if (data.type === 'gameState') { isGamePlaying = data.isPlaying; updateStatusUI(); } if (data.type === 'restart') { calledNumbers.clear(); isGamePlaying = false; updateGridState(); updateStatusUI(); } });
+        socket.on('game-sync', (gameState) => { calledNumbers = new Set(gameState.drawnNumbers || []); isGamePlaying = gameState.isPlaying || false; updateGridState(); updateStatusUI(); });
+        generateGrid();
+    </script>
+</body>
+</html>

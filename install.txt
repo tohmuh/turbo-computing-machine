@@ -1,0 +1,33 @@
+command text
+
+pkg update && pkg upgrade
+
+pkg install nodejs
+termux-setup-storage
+
+cd storage/downloads/TambolaGame
+
+ls
+
+npm install
+
+-------
+
+
+pkg update && pkg upgrade
+
+pkg install nodejs
+
+termux-setup-storage
+
+mv storage/downloads/TambolaGame ~/
+
+cd ~/TambolaGame
+
+npm install
+
+node server.js
+
+
+ ----ipdress
+ifconfig
